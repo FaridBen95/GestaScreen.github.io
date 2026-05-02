@@ -244,7 +244,7 @@ select.fcs{cursor:pointer}
       <div class="tbl-wrap">
         <table>
           <thead><tr>
-            <th>Code</th><th>Âge</th><th>Résidence</th><th>IMC av.</th>
+            <th>Code</th><th>Âge</th><th>Résidence</th><th>IMC act.</th>
             <th>Glycémie (g/L)</th><th>Diagnostic DG</th>
             <th style="text-align:center">Score</th><th>Niveau de risque</th><th>Actions</th>
           </tr></thead>
@@ -377,10 +377,10 @@ select.fcs{cursor:pointer}
       <div class="form-section-title"><span>📏</span> Mesures anthropométriques</div>
       <div class="form-grid">
         <div class="fgi"><label>Taille (cm) <span style="color:var(--danger)">*</span></label><input type="number" class="fcs" id="f-taille" min="100" max="220" placeholder="ex: 165" oninput="calcIMC()"></div>
-        <div class="fgi"><label>Poids avant grossesse (kg) <span style="color:var(--danger)">*</span></label><input type="number" class="fcs" id="f-poids-avant" min="30" max="200" placeholder="ex: 62" oninput="calcIMC()"></div>
-        <div class="fgi"><label>Poids actuel (kg)</label><input type="number" class="fcs" id="f-poids-actuel" min="30" max="220" placeholder="ex: 74"></div>
+        <div class="fgi"><label>Poids avant grossesse (kg)</label><input type="number" class="fcs" id="f-poids-avant" min="30" max="200" placeholder="ex: 62"></div>
+        <div class="fgi"><label>Poids actuel (kg) <span style="color:var(--danger)">*</span></label><input type="number" class="fcs" id="f-poids-actuel" min="30" max="220" placeholder="ex: 74" oninput="calcIMC()"></div>
         <div class="fgi">
-          <label>IMC avant grossesse <span class="auto-badge">Auto-calculé</span></label>
+          <label>IMC actuel <span class="auto-badge">Auto-calculé</span></label>
           <div class="imc-disp" id="imc-disp">—</div>
           <input type="hidden" id="f-imc">
           <span class="hint">&lt;35=Score 1 (Vert) · 35–39.9=2 (Orange) · ≥40=3 (Rouge)</span>
@@ -479,7 +479,7 @@ select.fcs{cursor:pointer}
       <div class="chart-card"><h3>Niveaux de risque pondéré</h3><div class="chart-wrap"><canvas id="chart-risk"></canvas></div></div>
       <div class="chart-card"><h3>Fréquence du DG (Diagnostic)</h3><div class="chart-wrap"><canvas id="chart-dg"></canvas></div></div>
       <div class="chart-card"><h3>Répartition par tranche d'âge</h3><div class="chart-wrap"><canvas id="chart-age"></canvas></div></div>
-      <div class="chart-card"><h3>IMC avant grossesse (catégories de risque)</h3><div class="chart-wrap"><canvas id="chart-imc"></canvas></div></div>
+      <div class="chart-card"><h3>IMC actuel (catégories de risque)</h3><div class="chart-wrap"><canvas id="chart-imc"></canvas></div></div>
       <div class="chart-card"><h3>Activité physique (score de risque associé)</h3><div class="chart-wrap"><canvas id="chart-activite"></canvas></div></div>
       <div class="chart-card"><h3>Complications associées</h3><div class="chart-wrap"><canvas id="chart-complic"></canvas></div></div>
     </div>
@@ -604,7 +604,7 @@ const RISK_BADGE  ={ low:'badge-risk-low', med:'badge-risk-med', high:'badge-ris
 const RISK_DOT    ={ low:'dot-g', med:'dot-o', high:'dot-r' };
 const SCORE_PILL  ={ 1:'sp-g', 2:'sp-o', 3:'sp-r' };
 const RISK_TOTAL_C={ low:'rt-g', med:'rt-o', high:'rt-r' };
-const PARAM_LABELS={ age:'Âge', imc:'IMC avant grossesse', atcdDG:'ATCD diabète gestationnel', poidsBebe:'Poids bébé (naissance)', activite:'Activité physique', alimentation:'Habitudes alimentaires', glycemie:'Glycémie (g/L)' };
+const PARAM_LABELS={ age:'Âge', imc:'IMC actuel', atcdDG:'ATCD diabète gestationnel', poidsBebe:'Poids bébé (naissance)', activite:'Activité physique', alimentation:'Habitudes alimentaires', glycemie:'Glycémie (g/L)' };
 
 // ================================================================
 //  ROUTING
@@ -776,7 +776,7 @@ function renderLiveRisk(p){
 // ── IMC & DIAG ──
 function calcIMC(){
   const t=parseFloat(document.getElementById('f-taille').value);
-  const w=parseFloat(document.getElementById('f-poids-avant').value);
+  const w=parseFloat(document.getElementById('f-poids-actuel').value);
   const d=document.getElementById('imc-disp');
   if(t>0&&w>0){ const v=parseFloat((w/((t/100)**2)).toFixed(2)); d.textContent=v+' kg/m²'; document.getElementById('f-imc').value=v; }
   else { d.textContent='—'; document.getElementById('f-imc').value=''; }
@@ -807,9 +807,10 @@ function savePatient(){
   const gly=document.getElementById('f-glycemie').value;
   const taille=document.getElementById('f-taille').value;
   const poidsAvant=document.getElementById('f-poids-avant').value;
+  const poidsActuel=document.getElementById('f-poids-actuel').value;
   if(!code){ toast('⚠ Le code participante est requis.'); return; }
   if(!age){ toast('⚠ L\'âge est requis.'); return; }
-  if(!taille||!poidsAvant){ toast('⚠ La taille et le poids avant grossesse sont requis.'); return; }
+  if(!taille||!poidsActuel){ toast('⚠ La taille et le poids actuel sont requis pour calculer l\'IMC.'); return; }
   if(!gly){ toast('⚠ La valeur de glycémie est requise.'); return; }
   const pts=getPatients();
   if(!currentEditId&&pts.find(p=>p.code===code)){ toast('⚠ Ce code participante existe déjà.'); return; }
@@ -834,7 +835,7 @@ function savePatient(){
     boissons:document.getElementById('f-boissons').value,
     taille:parseFloat(taille)||null,
     poidsAvant:parseFloat(poidsAvant)||null,
-    poidsActuel:parseFloat(document.getElementById('f-poids-actuel').value)||null,
+    poidsActuel:parseFloat(poidsActuel)||null,
     imc:document.getElementById('f-imc').value||null,
     glycemie:parseFloat(gly)||null,
     diagnostic:document.getElementById('f-diagnostic').value||'Non',
@@ -959,9 +960,9 @@ function importData(){
 }
 
 const TEMPLATE=[
-  {"code":"P-001","age":32,"residence":"Oran","instruction":"Universitaire","profession":"Enseignante","matrimoniale":"Mariée","diabeteAvant":"Non","atcdFamily":["Mère"],"maladieActuelle":["Aucune"],"nbGrossesses":2,"parite":1,"poidsBebe":"4.2","atcdDG":"Oui","ageGestationnel":28,"typeGrossesse":"Simple","activite":"Sédentaire","alimentation":"Riche en sucres","boissons":"Souvent","taille":163,"poidsAvant":90,"poidsActuel":102,"imc":33.9,"glycemie":1.12,"diagnostic":"Oui","diagOverride":"auto","priseCharge":"Insulinothérapie","complications":["Macrosomie"]},
-  {"code":"P-002","age":24,"residence":"Alger","instruction":"Secondaire","profession":"Femme au foyer","matrimoniale":"Mariée","diabeteAvant":"Non","atcdFamily":["Aucun"],"maladieActuelle":["Aucune"],"nbGrossesses":1,"parite":0,"poidsBebe":"3.2","atcdDG":"Non","ageGestationnel":32,"typeGrossesse":"Simple","activite":"Modérée","alimentation":"Équilibrée","boissons":"Rarement","taille":162,"poidsAvant":58,"poidsActuel":66,"imc":22.1,"glycemie":0.97,"diagnostic":"Oui","diagOverride":"auto","priseCharge":"Suivi médical régulier","complications":["Aucune"]},
-  {"code":"P-003","age":27,"residence":"Constantine","instruction":"Universitaire","profession":"Médecin","matrimoniale":"Mariée","diabeteAvant":"Non","atcdFamily":["Aucun"],"maladieActuelle":["Aucune"],"nbGrossesses":1,"parite":0,"poidsBebe":"3.0","atcdDG":"Non","ageGestationnel":36,"typeGrossesse":"Simple","activite":"Intense","alimentation":"Équilibrée","boissons":"Jamais","taille":168,"poidsAvant":60,"poidsActuel":70,"imc":21.3,"glycemie":0.88,"diagnostic":"Non","diagOverride":"auto","priseCharge":"Pas de prise en charge","complications":["Aucune"]}
+  {"code":"P-001","age":32,"residence":"Oran","instruction":"Universitaire","profession":"Enseignante","matrimoniale":"Mariée","diabeteAvant":"Non","atcdFamily":["Mère"],"maladieActuelle":["Aucune"],"nbGrossesses":2,"parite":1,"poidsBebe":"4.2","atcdDG":"Oui","ageGestationnel":28,"typeGrossesse":"Simple","activite":"Sédentaire","alimentation":"Riche en sucres","boissons":"Souvent","taille":163,"poidsAvant":90,"poidsActuel":102,"imc":38.4,"glycemie":1.12,"diagnostic":"Oui","diagOverride":"auto","priseCharge":"Insulinothérapie","complications":["Macrosomie"]},
+  {"code":"P-002","age":24,"residence":"Alger","instruction":"Secondaire","profession":"Femme au foyer","matrimoniale":"Mariée","diabeteAvant":"Non","atcdFamily":["Aucun"],"maladieActuelle":["Aucune"],"nbGrossesses":1,"parite":0,"poidsBebe":"3.2","atcdDG":"Non","ageGestationnel":32,"typeGrossesse":"Simple","activite":"Modérée","alimentation":"Équilibrée","boissons":"Rarement","taille":162,"poidsAvant":58,"poidsActuel":66,"imc":25.1,"glycemie":0.97,"diagnostic":"Oui","diagOverride":"auto","priseCharge":"Suivi médical régulier","complications":["Aucune"]},
+  {"code":"P-003","age":27,"residence":"Constantine","instruction":"Universitaire","profession":"Médecin","matrimoniale":"Mariée","diabeteAvant":"Non","atcdFamily":["Aucun"],"maladieActuelle":["Aucune"],"nbGrossesses":1,"parite":0,"poidsBebe":"3.0","atcdDG":"Non","ageGestationnel":36,"typeGrossesse":"Simple","activite":"Intense","alimentation":"Équilibrée","boissons":"Jamais","taille":168,"poidsAvant":60,"poidsActuel":70,"imc":24.8,"glycemie":0.88,"diagnostic":"Non","diagOverride":"auto","priseCharge":"Pas de prise en charge","complications":["Aucune"]}
 ];
 
 function downloadTemplate(){
